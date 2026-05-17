@@ -59,7 +59,8 @@ PERSON_COLS = {
     'death': 10,          
     'certainty2': 11,     
     'lang_knowledge': 12, 
-    'faith': 13,         
+    'lang_abrev': 13,
+    'faith': 14,         
 }
 
 PLACE_COLS = {
@@ -231,6 +232,7 @@ def construir_person_xml(fila: pd.Series) -> str:
     cert_birth = _text_segura(fila.iloc[PERSON_COLS['certainty1']])
     cert_death = _text_segura(fila.iloc[PERSON_COLS['certainty2']])
     lang_knowledge = _llista_camp(fila.iloc[PERSON_COLS['lang_knowledge']])
+    lang_abrev = _llista_camp(fila.iloc[PERSON_COLS['lang_abrev']])
     faith = _text_segura(fila.iloc[PERSON_COLS['faith']])
 
     linies = [f'<!-- {escape(nom)} -->\n<person xml:id="{escape(xml_id)}">']
@@ -257,8 +259,8 @@ def construir_person_xml(fila: pd.Series) -> str:
         linies.append(_etiqueta_opcional('death', death, cert_death))
     if lang_knowledge:
         linies.append('   <langKnowledge>')
-        for idioma in lang_knowledge:
-            linies.append(f'      <langKnown tag="***">{escape(idioma)}</langKnown>')
+        for idioma, abreviatura in zip(lang_knowledge, lang_abrev):
+            linies.append(f'      <langKnown tag="{escape(abreviatura)}">{escape(idioma)}</langKnown>')
         linies.append('   </langKnowledge>')
     if faith:
         linies.append(f'   <faith>{escape(faith)}</faith>')
