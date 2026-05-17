@@ -47,18 +47,19 @@ URL_XLSX_2 = f"https://docs.google.com/spreadsheets/d/{st.secrets['SHEET_ID_2']}
 
 PERSON_COLS = {
     'name': 0,           
-    'id': 1,             
-    'ref_viaf': 2,       
-    'ref_2': 3,
-    'ref_3': 4,
-    'role': 5,           
-    'occupation': 6,     
-    'birth': 7,          
-    'certainty1': 8,     
-    'death': 9,          
-    'certainty2': 10,     
-    'lang_knowledge': 11, 
-    'faith': 12,         
+    'id': 1,
+    'woman': 2,          
+    'ref_viaf': 3,       
+    'ref_2': 4,
+    'ref_3': 5,
+    'role': 6,           
+    'occupation': 7,     
+    'birth': 8,          
+    'certainty1': 9,     
+    'death': 10,          
+    'certainty2': 11,     
+    'lang_knowledge': 12, 
+    'faith': 13,         
 }
 
 PLACE_COLS = {
@@ -218,6 +219,7 @@ def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
 def construir_person_xml(fila: pd.Series) -> str:
     nom = _text_segura(fila.iloc[PERSON_COLS['name']])
     xml_id = _text_segura(fila.iloc[PERSON_COLS['id']])
+    woman = _text_segura(fila.iloc[PERSON_COLS['woman']])
     role = _text_segura(fila.iloc[PERSON_COLS['role']])
     ref = _text_segura(fila.iloc[PERSON_COLS['ref_viaf']])
     ref_2 = _text_segura(fila.iloc[PERSON_COLS['ref_2']])
@@ -236,6 +238,8 @@ def construir_person_xml(fila: pd.Series) -> str:
     attrs_persname = []
     if role:
         attrs_persname.append(f'role="{escape(role)}"')
+    if woman.lower() == 'woman':
+        attrs_persname.append('type="woman"')
 
     refs = [escape(r) for r in (ref, ref_2, ref_3) if r]
     if refs:
