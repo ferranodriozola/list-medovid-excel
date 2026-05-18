@@ -43,7 +43,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-URL_XLSX = f"https://docs.google.com/spreadsheets/d/{st.secrets['SHEET_ID_1']}/export?format=xlsx"
+URL_XLSX = f"https://docs.google.com/spreadsheets/d/{st.secrets['SHEET_ID']}/export?format=xlsx"
 URL_XLSX_2 = f"https://docs.google.com/spreadsheets/d/{st.secrets['SHEET_ID_2']}/export?format=xlsx"
 
 PERSON_COLS = {
@@ -323,7 +323,7 @@ if allow_local_second:
         help="Només apareix si la variable d'entorn SHOW_SECOND_EXCEL està activa localment"
     )
 
-tab_labels = ["SHEET_ID_1"]
+tab_labels = ["SHEET_ID"]
 if show_second_now:
     tab_labels.append("SHEET_ID_2")
 
