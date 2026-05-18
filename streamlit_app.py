@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import certifi
+import os
 from io import BytesIO
 from xml.sax.saxutils import escape
 
@@ -170,6 +171,7 @@ def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
 
             except Exception as e:
                 st.error(f"S'ha produït un error en la connexió: {e}")
+                
     if url_xlsx == URL_XLSX_2:
         fulls_disponibles = obtenir_fulls(url_xlsx)[:1]
 
@@ -305,10 +307,31 @@ def construir_person_xml_simple(fila: pd.Series) -> str:
     
     return '\n'.join(linies)
 
-tabs = st.tabs(["SHEET_ID_1", "SHEET_ID_2"])
+
+
+# Control per mostrar el segon Excel només localment
+# Activa-ho localment amb `export SHOW_SECOND_EXCEL=1` abans d'executar
+allow_local_second = os.environ.get("SHOW_SECOND_EXCEL", "0") == "1"
+
+# Si `allow_local_second` és True, mostrem una checkbox a la sidebar
+# que permet mostrar/ocultar el segon Excel mentre s'està treballant localment.
+show_second_now = False
+if allow_local_second:
+    st.sidebar.markdown("**Mode desenvolupador**")
+    show_second_now = st.sidebar.checkbox(
+        "Mostrar segon Excel (local)", value=False,
+        help="Només apareix si la variable d'entorn SHOW_SECOND_EXCEL està activa localment"
+    )
+
+tab_labels = ["SHEET_ID_1"]
+if show_second_now:
+    tab_labels.append("SHEET_ID_2")
+
+tabs = st.tabs(tab_labels)
 
 with tabs[0]:
     renderitzar_font_dades(URL_XLSX, "sheet_1")
 
-with tabs[1]:
-    renderitzar_font_dades(URL_XLSX_2, "sheet_2")
+if show_second_now:
+    with tabs[1]:
+        renderitzar_font_dades(URL_XLSX_2, "sheet_2")
