@@ -81,6 +81,7 @@ NOMS_BLOCS = [
     "Puteolanus",
     "Comitibus",
     "Calphurnius",
+    "Aleriensis",
     "Accursius",
     "Regius",
     "Alii"
