@@ -75,6 +75,17 @@ PLACE_COLS = {
     'longitude': 5, 
 }
 
+# Noms dels blocs de personatges
+NOMS_BLOCS = [
+    "Mitològics pendents",
+    "Puteolanus",
+    "Comitibus",
+    "Calphurnius",
+    "Accursius",
+    "Regius",
+    "Alii"
+]
+
 
 @st.cache_data
 def descarregar_excel(url_xlsx: str) -> bytes:
@@ -168,7 +179,10 @@ def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
                         st.warning("No hi ha personatges vàlids al full seleccionat.")
                     else:
                         for num_bloc, bloc in enumerate(blocs, 1):
-                            with st.expander(f"📦 Bloc {num_bloc} ({len(bloc)} personatges)", expanded=True):
+                            # Usar el nom de la llista NOMS_BLOCS o el número per defecte
+                            nom_bloc = NOMS_BLOCS[num_bloc - 1] if num_bloc - 1 < len(NOMS_BLOCS) else f"Bloc {num_bloc}"
+                            
+                            with st.expander(f"{nom_bloc} ({len(bloc)} personatges)", expanded=True):
                                 # Botó per copiar tot el bloc
                                 xmls_bloc = [construir_person_xml(fila) for fila in bloc]
                                 xml_complet_bloc = "\n".join(xmls_bloc)
@@ -176,13 +190,13 @@ def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
                                 col1, col2, col3 = st.columns([1.5, 2, 2])
                                 with col1:
                                     if st.button(
-                                        "📋 Copiar bloc",
+                                        "Copiar bloc",
                                         key=f"{prefix_clau}_copy_bloc_{num_bloc}",
                                         help="Copia tots els XML del bloc"
                                     ):
                                         st.session_state.copied_bloc = num_bloc
                                         # Copiar al portapapeles via JavaScript
-                                        st.write(f"**Bloc {num_bloc} copiat!** ({len(bloc)} personatges)")
+                                        st.write(f"**{nom_bloc} copiat!** ({len(bloc)} personatges)")
                                 
                                 with col2:
                                     st.metric("Personatges", len(bloc))
