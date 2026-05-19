@@ -2,11 +2,14 @@ import streamlit as st
 import pandas as pd
 import requests
 import certifi
-import os
 from io import BytesIO
 from xml.sax.saxutils import escape
 
 st.set_page_config(page_title="Llista a xml", page_icon="🛠️")
+
+# Inicialitzar session state per als blocs copiats
+if "copied_bloc" not in st.session_state:
+    st.session_state.copied_bloc = None
 
 st.markdown('<div id="top" style="position: relative; top: -3.5rem;"></div>', unsafe_allow_html=True)
 st.title("XLSX a XML")
@@ -44,7 +47,6 @@ st.markdown(
 )
 
 URL_XLSX = f"https://docs.google.com/spreadsheets/d/{st.secrets['SHEET_ID']}/export?format=xlsx"
-URL_XLSX_2 = f"https://docs.google.com/spreadsheets/d/{st.secrets['SHEET_ID_2']}/export?format=xlsx"
 
 PERSON_COLS = {
     'name': 0,           
@@ -105,6 +107,29 @@ def _etiqueta_opcional(tag: str, contingut: str, cert: str = "") -> str:
     return f'   <{tag}{atribut_cert}>{escape(contingut)}</{tag}>'
 
 
+def agrupar_personatges_per_blocs(df_filtrat: pd.DataFrame) -> list[list[pd.Series]]:
+    """Agrupa els personatges en blocs separats per files buides."""
+    blocs = []
+    bloc_actual = []
+    
+    for idx, fila in df_filtrat.iterrows():
+        id_valor = _text_segura(fila.iloc[PERSON_COLS['id']])
+        name_valor = _text_segura(fila.iloc[PERSON_COLS['name']])
+        
+        # Si és una fila vàlida, afegeix al bloc actual
+        if id_valor and name_valor:
+            bloc_actual.append(fila)
+        # Si és una fila buida i hi ha un bloc en construcció, guarda'l
+        elif bloc_actual:
+            blocs.append(bloc_actual)
+            bloc_actual = []
+    
+    # Afegeix el darrer bloc si existeix
+    if bloc_actual:
+        blocs.append(bloc_actual)
+    
+    return blocs
+
 def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
     if url_xlsx == URL_XLSX:
         fulls_disponibles = obtenir_fulls(url_xlsx)[:2]
@@ -137,18 +162,41 @@ def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
                 if full_seleccionat == 'listPerson':
                     st.subheader("Personatges en format XML")
 
-                    files_valides = df_filtrat.copy()
-                    files_valides = files_valides[files_valides.iloc[:, PERSON_COLS['id']].notna()]
-                    files_valides = files_valides[files_valides.iloc[:, PERSON_COLS['name']].notna()]
+                    blocs = agrupar_personatges_per_blocs(df_filtrat)
 
-                    if files_valides.empty:
+                    if not blocs:
                         st.warning("No hi ha personatges vàlids al full seleccionat.")
                     else:
-                        for _, fila in files_valides.iterrows():
-                            nom = _text_segura(fila.iloc[PERSON_COLS['name']]) or '(sense nom)'
-                            xml_id = _text_segura(fila.iloc[PERSON_COLS['id']]) or '(sense id)'
-                            st.markdown(f"**{nom} ({xml_id})**")
-                            st.code(construir_person_xml(fila), language='xml')
+                        for num_bloc, bloc in enumerate(blocs, 1):
+                            with st.expander(f"📦 Bloc {num_bloc} ({len(bloc)} personatges)", expanded=True):
+                                # Botó per copiar tot el bloc
+                                xmls_bloc = [construir_person_xml(fila) for fila in bloc]
+                                xml_complet_bloc = "\n".join(xmls_bloc)
+                                
+                                col1, col2, col3 = st.columns([1.5, 2, 2])
+                                with col1:
+                                    if st.button(
+                                        "📋 Copiar bloc",
+                                        key=f"{prefix_clau}_copy_bloc_{num_bloc}",
+                                        help="Copia tots els XML del bloc"
+                                    ):
+                                        st.session_state.copied_bloc = num_bloc
+                                        # Copiar al portapapeles via JavaScript
+                                        st.write(f"**Bloc {num_bloc} copiat!** ({len(bloc)} personatges)")
+                                
+                                with col2:
+                                    st.metric("Personatges", len(bloc))
+                                
+                                # Mostrar l'XML complet en un bloc de codi
+                                st.code(xml_complet_bloc, language='xml')
+                                
+                                # Mostrar cada personatge individualment
+                                with st.expander("Veure personatges individuals"):
+                                    for idx, fila in enumerate(bloc, 1):
+                                        nom = _text_segura(fila.iloc[PERSON_COLS['name']]) or '(sense nom)'
+                                        xml_id = _text_segura(fila.iloc[PERSON_COLS['id']]) or '(sense id)'
+                                        st.markdown(f"**{idx}. {nom} ({xml_id})**")
+                                        st.code(construir_person_xml(fila), language='xml')
 
                 elif full_seleccionat == 'listPlace':
                     st.subheader("Llocs en format XML")
@@ -171,53 +219,6 @@ def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
 
             except Exception as e:
                 st.error(f"S'ha produït un error en la connexió: {e}")
-                
-    if url_xlsx == URL_XLSX_2:
-        fulls_disponibles = obtenir_fulls(url_xlsx)[:1]
-
-        if not fulls_disponibles:
-            st.error("No s'han trobat fulls disponibles a l'Excel.")
-            return
-
-        full_seleccionat = st.selectbox(
-            "Selecciona el full de l'Excel:",
-            fulls_disponibles,
-            key=f"{prefix_clau}_full",
-        )
-
-        if st.button('Forçar recàrrega', key=f"{prefix_clau}_reload"):
-            descarregar_excel.clear()
-            obtenir_fulls.clear()
-            llegir_full.clear()
-            if hasattr(st, 'rerun'):
-                st.rerun()
-            else:
-                st.stop()
-
-        with st.spinner('Processant dades...'):
-            try:
-                df = llegir_full(url_xlsx, full_seleccionat)
-
-                df_filtrat = df.iloc[0:1473, 0:3]
-
-                st.subheader("Personatges en format XML")
-
-                files_valides = df_filtrat.copy()
-                files_valides = files_valides[files_valides.iloc[:, 1].notna()]  # Filtrar per columna ID (1)
-                files_valides = files_valides[files_valides.iloc[:, 1] != ""]  # Sense files buides a ID
-
-                if files_valides.empty:
-                    st.warning("No hi ha personatges vàlids al full seleccionat.")
-                else:
-                    for _, fila in files_valides.iterrows():
-                        nom = _text_segura(fila.iloc[0]) or '(sense nom)'
-                        xml_id = _text_segura(fila.iloc[1]) or '(sense id)'
-                        st.markdown(f"**{nom} ({xml_id})**")
-                        st.code(construir_person_xml_simple(fila), language='xml')
-
-            except Exception as e:
-                st.error(f"S'ha produït un error en la connexió: {e}")
-
 
 def construir_person_xml(fila: pd.Series) -> str:
     nom = _text_segura(fila.iloc[PERSON_COLS['name']])
@@ -307,31 +308,7 @@ def construir_person_xml_simple(fila: pd.Series) -> str:
     
     return '\n'.join(linies)
 
-
-
-# Control per mostrar el segon Excel només localment
-# Activa-ho localment amb `export SHOW_SECOND_EXCEL=1` abans d'executar
-allow_local_second = os.environ.get("SHOW_SECOND_EXCEL", "0") == "1"
-
-# Si `allow_local_second` és True, mostrem una checkbox a la sidebar
-# que permet mostrar/ocultar el segon Excel mentre s'està treballant localment.
-show_second_now = False
-if allow_local_second:
-    st.sidebar.markdown("**Mode desenvolupador**")
-    show_second_now = st.sidebar.checkbox(
-        "Mostrar segon Excel (local)", value=False,
-        help="Només apareix si la variable d'entorn SHOW_SECOND_EXCEL està activa localment"
-    )
-
-tab_labels = ["SHEET_ID"]
-if show_second_now:
-    tab_labels.append("SHEET_ID_2")
-
-tabs = st.tabs(tab_labels)
+tabs = st.tabs(["SHEET_ID"])
 
 with tabs[0]:
     renderitzar_font_dades(URL_XLSX, "sheet_1")
-
-if show_second_now:
-    with tabs[1]:
-        renderitzar_font_dades(URL_XLSX_2, "sheet_2")
