@@ -184,7 +184,7 @@ def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
                             
                             with st.expander(f"{nom_bloc} ({len(bloc)} personatges)", expanded=True):
                                 # Botó per copiar tot el bloc
-                                xmls_bloc = [construir_person_xml(fila) for fila in bloc]
+                                xmls_bloc = [construir_person_xml(fila) for _, fila in bloc.iterrows()]
                                 xml_complet_bloc = "\n".join(xmls_bloc)
                                 
                                 col1, col2, col3 = st.columns([1.5, 2, 2])
@@ -206,7 +206,7 @@ def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
                                 
                                 # Mostrar cada personatge individualment
                                 with st.expander("Veure personatges individuals"):
-                                    for idx, fila in enumerate(bloc, 1):
+                                    for idx, (_, fila) in enumerate(bloc.iterrows(), 1):
                                         nom = _text_segura(fila.iloc[PERSON_COLS['name']]) or '(sense nom)'
                                         xml_id = _text_segura(fila.iloc[PERSON_COLS['id']]) or '(sense id)'
                                         st.markdown(f"**{idx}. {nom} ({xml_id})**")
