@@ -156,7 +156,6 @@ def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
                     if files_valides.empty:
                         st.warning("No hi ha personatges vàlids al full seleccionat.")
                     else:
-<<<<<<< HEAD
                         for num_bloc, bloc in enumerate(blocs, 1):
                             # Usar el nom de la llista NOMS_BLOCS o el número per defecte
                             nom_bloc = NOMS_BLOCS[num_bloc - 1] if num_bloc - 1 < len(NOMS_BLOCS) else f"Bloc {num_bloc}"
@@ -190,13 +189,6 @@ def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
                                         xml_id = _text_segura(fila.iloc[PERSON_COLS['id']]) or '(sense id)'
                                         st.markdown(f"**{idx}. {nom} ({xml_id})**")
                                         st.code(construir_person_xml(fila), language='xml')
-=======
-                        for _, fila in files_valides.iterrows():
-                            nom = _text_segura(fila.iloc[PERSON_COLS['name']]) or '(sense nom)'
-                            xml_id = _text_segura(fila.iloc[PERSON_COLS['id']]) or '(sense id)'
-                            st.markdown(f"**{nom} ({xml_id})**")
-                            st.code(construir_person_xml(fila), language='xml')
->>>>>>> parent of 22525a5 (excel mythologicals fora i opció de copiada múltiple)
 
                 elif full_seleccionat == 'listPlace':
                     st.subheader("Llocs en format XML")
