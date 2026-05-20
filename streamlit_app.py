@@ -112,7 +112,7 @@ def _etiqueta_opcional(tag: str, contingut: str, cert: str = "") -> str:
     return f'   <{tag}{atribut_cert}>{escape(contingut)}</{tag}>'
 
 
-def dividir_en_blocs(files_valides: pd.DataFrame, noms_blocs: List[str]) -> List[pd.DataFrame]:
+def dividir_en_blocs(files_valides: pd.DataFrame) -> List[pd.DataFrame]:
     """Divideix els registres segons les files buides que els separen a l'Excel."""
     if files_valides.empty:
         return []
@@ -167,7 +167,7 @@ def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
                 if full_seleccionat == 'listPerson':
                     st.subheader("Personatges en format XML")
 
-                    blocs = dividir_en_blocs(df_filtrat, NOMS_BLOCS)
+                    blocs = dividir_en_blocs(df_filtrat)
 
                     if not blocs:
                         st.warning("No hi ha personatges vàlids al full seleccionat.")
@@ -180,7 +180,7 @@ def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
                             if files_bloc.empty:
                                 continue
 
-                            # Usar el nom del primer personatge del bloc; fer fallback a NOMS_BLOCS o a "Bloc N"
+                            # Usar el nom del primer personatge del bloc; fer fallback a "Bloc N"
                             try:
                                 primer_nom = _text_segura(files_bloc.iloc[0, PERSON_COLS['name']])
                             except Exception:
@@ -189,7 +189,7 @@ def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
                             if primer_nom:
                                 nom_bloc = primer_nom
                             else:
-                                nom_bloc = NOMS_BLOCS[num_bloc - 1] if num_bloc - 1 < len(NOMS_BLOCS) else f"Bloc {num_bloc}"
+                                nom_bloc = f"Bloc {num_bloc}"
                             
                             with st.expander(f"{nom_bloc} ({len(files_bloc)} personatges)", expanded=True):
                                 # Botó per copiar tot el bloc
