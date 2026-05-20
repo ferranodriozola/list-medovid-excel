@@ -125,17 +125,26 @@ def _etiqueta_opcional(tag: str, contingut: str, cert: str = "") -> str:
 
 
 def dividir_en_blocs(files_valides: pd.DataFrame, noms_blocs: List[str]) -> List[pd.DataFrame]:
-    """Divideix els registres en blocs visuals amb una mida equilibrada."""
+    """Divideix els registres segons les files buides que els separen a l'Excel."""
     if files_valides.empty:
         return []
 
-    num_blocs = min(len(noms_blocs), len(files_valides))
-    mida_bloc = (len(files_valides) + num_blocs - 1) // num_blocs
+    blocs = []
+    bloc_actual = []
 
-    return [
-        files_valides.iloc[inici:inici + mida_bloc].reset_index(drop=True)
-        for inici in range(0, len(files_valides), mida_bloc)
-    ]
+    for _, fila in files_valides.iterrows():
+        if all(pd.isna(valor) or str(valor).strip() == "" for valor in fila.tolist()):
+            if bloc_actual:
+                blocs.append(pd.DataFrame(bloc_actual, columns=files_valides.columns).reset_index(drop=True))
+                bloc_actual = []
+            continue
+
+        bloc_actual.append(fila)
+
+    if bloc_actual:
+        blocs.append(pd.DataFrame(bloc_actual, columns=files_valides.columns).reset_index(drop=True))
+
+    return blocs
 
 
 def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
@@ -170,21 +179,25 @@ def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
                 if full_seleccionat == 'listPerson':
                     st.subheader("Personatges en format XML")
 
-                    files_valides = df_filtrat.copy()
-                    files_valides = files_valides[files_valides.iloc[:, PERSON_COLS['id']].notna()]
-                    files_valides = files_valides[files_valides.iloc[:, PERSON_COLS['name']].notna()]
+                    blocs = dividir_en_blocs(df_filtrat, NOMS_BLOCS)
 
-                    if files_valides.empty:
+                    if not blocs:
                         st.warning("No hi ha personatges vàlids al full seleccionat.")
                     else:
-                        blocs = dividir_en_blocs(files_valides, NOMS_BLOCS)
                         for num_bloc, bloc in enumerate(blocs, 1):
+                            files_bloc = bloc.copy()
+                            files_bloc = files_bloc[files_bloc.iloc[:, PERSON_COLS['id']].notna()]
+                            files_bloc = files_bloc[files_bloc.iloc[:, PERSON_COLS['name']].notna()]
+
+                            if files_bloc.empty:
+                                continue
+
                             # Usar el nom de la llista NOMS_BLOCS o el número per defecte
                             nom_bloc = NOMS_BLOCS[num_bloc - 1] if num_bloc - 1 < len(NOMS_BLOCS) else f"Bloc {num_bloc}"
                             
-                            with st.expander(f"{nom_bloc} ({len(bloc)} personatges)", expanded=True):
+                            with st.expander(f"{nom_bloc} ({len(files_bloc)} personatges)", expanded=True):
                                 # Botó per copiar tot el bloc
-                                xmls_bloc = [construir_person_xml(fila) for _, fila in bloc.iterrows()]
+                                xmls_bloc = [construir_person_xml(fila) for _, fila in files_bloc.iterrows()]
                                 xml_complet_bloc = "\n".join(xmls_bloc)
                                 
                                 col1, col2, col3 = st.columns([1.5, 2, 2])
@@ -196,17 +209,17 @@ def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
                                     ):
                                         st.session_state.copied_bloc = num_bloc
                                         # Copiar al portapapeles via JavaScript
-                                        st.write(f"**{nom_bloc} copiat!** ({len(bloc)} personatges)")
+                                        st.write(f"**{nom_bloc} copiat!** ({len(files_bloc)} personatges)")
                                 
                                 with col2:
-                                    st.metric("Personatges", len(bloc))
+                                    st.metric("Personatges", len(files_bloc))
                                 
                                 # Mostrar l'XML complet en un bloc de codi
                                 st.code(xml_complet_bloc, language='xml')
                                 
                                 # Mostrar cada personatge individualment
                                 with st.expander("Veure personatges individuals"):
-                                    for idx, (_, fila) in enumerate(bloc.iterrows(), 1):
+                                    for idx, (_, fila) in enumerate(files_bloc.iterrows(), 1):
                                         nom = _text_segura(fila.iloc[PERSON_COLS['name']]) or '(sense nom)'
                                         xml_id = _text_segura(fila.iloc[PERSON_COLS['id']]) or '(sense id)'
                                         st.markdown(f"**{idx}. {nom} ({xml_id})**")
