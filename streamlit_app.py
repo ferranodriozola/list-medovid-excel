@@ -3,6 +3,7 @@ import pandas as pd
 import requests
 import certifi
 import os
+from typing import List
 from io import BytesIO
 from xml.sax.saxutils import escape
 
@@ -43,8 +44,15 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-URL_XLSX = f"https://docs.google.com/spreadsheets/d/{st.secrets['SHEET_ID']}/export?format=xlsx"
-URL_XLSX_2 = f"https://docs.google.com/spreadsheets/d/{st.secrets['SHEET_ID_2']}/export?format=xlsx"
+SHEET_ID = st.secrets.get("SHEET_ID")
+SHEET_ID_2 = st.secrets.get("SHEET_ID_2")
+
+if not SHEET_ID:
+    st.error("Falta configurar SHEET_ID a st.secrets.")
+    st.stop()
+
+URL_XLSX = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=xlsx"
+URL_XLSX_2 = f"https://docs.google.com/spreadsheets/d/{SHEET_ID_2}/export?format=xlsx" if SHEET_ID_2 else ""
 
 PERSON_COLS = {
     'name': 0,           
@@ -105,7 +113,7 @@ def _text_segura(valor) -> str:
         return ""
     return str(valor).strip()
 
-def _llista_camp(valor) -> list[str]:
+def _llista_camp(valor) -> List[str]:
     text = _text_segura(valor)
     if not text:
         return []
@@ -116,7 +124,7 @@ def _etiqueta_opcional(tag: str, contingut: str, cert: str = "") -> str:
     return f'   <{tag}{atribut_cert}>{escape(contingut)}</{tag}>'
 
 
-def dividir_en_blocs(files_valides: pd.DataFrame, noms_blocs: list[str]) -> list[pd.DataFrame]:
+def dividir_en_blocs(files_valides: pd.DataFrame, noms_blocs: List[str]) -> List[pd.DataFrame]:
     """Divideix els registres en blocs visuals amb una mida equilibrada."""
     if files_valides.empty:
         return []
@@ -224,7 +232,7 @@ def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
                     st.warning("Full no reconegut. Prova amb listPerson o listPlace.")
 
             except Exception as e:
-                st.error(f"S'ha produït un error en la connexió: {e}")
+                st.error(f"S'ha produït un error en la connexió: {type(e).__name__}: {e}")
                 
     if url_xlsx == URL_XLSX_2:
         fulls_disponibles = obtenir_fulls(url_xlsx)[:1]
@@ -270,7 +278,7 @@ def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
                         st.code(construir_person_xml_simple(fila), language='xml')
 
             except Exception as e:
-                st.error(f"S'ha produït un error en la connexió: {e}")
+                st.error(f"S'ha produït un error en la connexió: {type(e).__name__}: {e}")
 
 
 def construir_person_xml(fila: pd.Series) -> str:
@@ -378,7 +386,7 @@ if allow_local_second:
     )
 
 tab_labels = ["SHEET_ID"]
-if show_second_now:
+if show_second_now and URL_XLSX_2:
     tab_labels.append("SHEET_ID_2")
 
 tabs = st.tabs(tab_labels)
@@ -386,6 +394,6 @@ tabs = st.tabs(tab_labels)
 with tabs[0]:
     renderitzar_font_dades(URL_XLSX, "sheet_1")
 
-if show_second_now:
+if show_second_now and URL_XLSX_2:
     with tabs[1]:
         renderitzar_font_dades(URL_XLSX_2, "sheet_2")
