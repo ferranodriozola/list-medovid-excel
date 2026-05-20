@@ -116,6 +116,20 @@ def _etiqueta_opcional(tag: str, contingut: str, cert: str = "") -> str:
     return f'   <{tag}{atribut_cert}>{escape(contingut)}</{tag}>'
 
 
+def dividir_en_blocs(files_valides: pd.DataFrame, noms_blocs: list[str]) -> list[pd.DataFrame]:
+    """Divideix els registres en blocs visuals amb una mida equilibrada."""
+    if files_valides.empty:
+        return []
+
+    num_blocs = min(len(noms_blocs), len(files_valides))
+    mida_bloc = (len(files_valides) + num_blocs - 1) // num_blocs
+
+    return [
+        files_valides.iloc[inici:inici + mida_bloc].reset_index(drop=True)
+        for inici in range(0, len(files_valides), mida_bloc)
+    ]
+
+
 def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
     if url_xlsx == URL_XLSX:
         fulls_disponibles = obtenir_fulls(url_xlsx)[:2]
@@ -155,6 +169,7 @@ def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
                     if files_valides.empty:
                         st.warning("No hi ha personatges vàlids al full seleccionat.")
                     else:
+                        blocs = dividir_en_blocs(files_valides, NOMS_BLOCS)
                         for num_bloc, bloc in enumerate(blocs, 1):
                             # Usar el nom de la llista NOMS_BLOCS o el número per defecte
                             nom_bloc = NOMS_BLOCS[num_bloc - 1] if num_bloc - 1 < len(NOMS_BLOCS) else f"Bloc {num_bloc}"
