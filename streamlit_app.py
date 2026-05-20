@@ -81,18 +81,6 @@ PLACE_COLS = {
     'longitude': 5, 
 }
 
-# Noms dels blocs de personatges
-NOMS_BLOCS = [
-    "Mitològics pendents",
-    "Puteolanus",
-    "Comitibus",
-    "Calphurnius",
-    "Accursius",
-    "Regius",
-    "Alii"
-]
-
-
 @st.cache_data
 def descarregar_excel(url_xlsx: str) -> bytes:
     resposta = requests.get(url_xlsx, timeout=30, verify=certifi.where())
