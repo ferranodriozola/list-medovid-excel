@@ -192,8 +192,16 @@ def renderitzar_font_dades(url_xlsx: str, prefix_clau: str) -> None:
                             if files_bloc.empty:
                                 continue
 
-                            # Usar el nom de la llista NOMS_BLOCS o el número per defecte
-                            nom_bloc = NOMS_BLOCS[num_bloc - 1] if num_bloc - 1 < len(NOMS_BLOCS) else f"Bloc {num_bloc}"
+                            # Usar el nom del primer personatge del bloc; fer fallback a NOMS_BLOCS o a "Bloc N"
+                            try:
+                                primer_nom = _text_segura(files_bloc.iloc[0, PERSON_COLS['name']])
+                            except Exception:
+                                primer_nom = ""
+
+                            if primer_nom:
+                                nom_bloc = primer_nom
+                            else:
+                                nom_bloc = NOMS_BLOCS[num_bloc - 1] if num_bloc - 1 < len(NOMS_BLOCS) else f"Bloc {num_bloc}"
                             
                             with st.expander(f"{nom_bloc} ({len(files_bloc)} personatges)", expanded=True):
                                 # Botó per copiar tot el bloc
